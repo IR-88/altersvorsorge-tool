@@ -108,6 +108,10 @@ exports.handler = async function (event) {
       };
     }
 
+    // E-Mail-Versand ist bewusst "best effort": schlägt er fehl, bekommt die
+    // Nutzerin ihre Auswertung trotzdem sofort auf der Seite angezeigt.
+    await sendResultEmails(answers, parsed).catch(() => {});
+
     return {
       statusCode: 200,
       headers,
@@ -144,4 +148,109 @@ Antworte NUR mit einem validen JSON-Array, ohne Markdown, ohne Backticks, ohne T
 3. title: "Pensionskasse: Rente oder Kapital?" — konkrete Abwägung Rente vs. Kapitalbezug basierend auf der genannten Präferenz, Alter und Guthaben.
 4. title: "Worauf du jetzt achten solltest" — 3-4 wichtige Punkte vor der Pensionierung, angepasst an ihre Situation.
 5. title: "Deine nächsten Schritte" — konkrete, umsetzbare nächste Schritte.`;
+}
+
+// Verschickt die Auswertung an die Nutzerin und (falls konfiguriert) eine
+// kurze Lead-Benachrichtigung an die Betreiberin. Beide E-Mails laufen über
+// Resend. Fehlt einer der env vars, wird der jeweilige Versand übersprungen,
+// statt die ganze Anfrage scheitern zu lassen.
+async function sendResultEmails(answers, cards) {
+  const resendKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  if (!resendKey || !fromEmail) return;
+
+  const userEmail = (answers.email || "").trim();
+  const sendable = [];
+
+  if (userEmail) {
+    sendable.push({
+      from: fromEmail,
+      to: [userEmail],
+      subject: "Deine persönliche Vorsorge-Auswertung",
+      html: buildResultHtml(cards)
+    });
+  }
+
+  const notifyEmail = process.env.LEAD_NOTIFY_EMAIL;
+  if (notifyEmail) {
+    sendable.push({
+      from: fromEmail,
+      to: [notifyEmail],
+      subject: `Neuer Vorsorge-Check Lead: ${userEmail || "ohne E-Mail"}`,
+      html: buildLeadNotificationHtml(answers)
+    });
+  }
+
+  await Promise.all(
+    sendable.map((email) =>
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${resendKey}`
+        },
+        body: JSON.stringify(email)
+      })
+    )
+  );
+}
+
+function buildResultHtml(cards) {
+  const cardsHtml = (cards || [])
+    .map(
+      (c) => `
+        <tr>
+          <td style="padding:0 0 20px;">
+            <div style="background:#fbeef1;border-radius:14px;padding:20px 22px;">
+              <h3 style="margin:0 0 8px;font-family:Georgia,serif;color:#950032;font-size:18px;">${escapeHtml(c.title || "")}</h3>
+              <p style="margin:0;font-size:15px;line-height:1.6;color:#3a0014;">${escapeHtml(c.body || "")}</p>
+            </div>
+          </td>
+        </tr>`
+    )
+    .join("");
+
+  return `
+  <div style="background:#f2b7c2;padding:32px 16px;font-family:Arial,sans-serif;">
+    <table role="presentation" width="100%" style="max-width:560px;margin:0 auto;border-collapse:collapse;">
+      <tr>
+        <td style="padding-bottom:24px;text-align:center;">
+          <h1 style="margin:0;font-family:Georgia,serif;color:#950032;font-size:26px;">Deine Vorsorge-Auswertung</h1>
+        </td>
+      </tr>
+      ${cardsHtml}
+      <tr>
+        <td style="padding-top:12px;text-align:center;font-size:12px;color:#5a0020;line-height:1.5;">
+          Diese Einschätzung dient der ersten Orientierung und ersetzt keine persönliche Vorsorgeberatung.<br>
+          Klarblick Vorsorge
+        </td>
+      </tr>
+    </table>
+  </div>`;
+}
+
+function buildLeadNotificationHtml(answers) {
+  const rows = Object.entries(answers)
+    .map(
+      ([key, value]) => `
+        <tr>
+          <td style="padding:4px 10px;font-weight:bold;color:#3a0014;">${escapeHtml(key)}</td>
+          <td style="padding:4px 10px;color:#3a0014;">${escapeHtml(String(value))}</td>
+        </tr>`
+    )
+    .join("");
+
+  return `
+  <div style="font-family:Arial,sans-serif;padding:20px;">
+    <h2 style="color:#950032;">Neuer Vorsorge-Check Lead</h2>
+    <table role="presentation" style="border-collapse:collapse;">${rows}</table>
+  </div>`;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

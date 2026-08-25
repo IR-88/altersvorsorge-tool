@@ -271,8 +271,13 @@ const questions = [
   { key: "sicherheit_flexibilitaet", title: "Was ist dir bei der Pensionskasse wichtiger?", type: "single",
     options: ["Sicherheit: lebenslange, garantierte monatliche Rente", "Flexibilität: Kapitalbezug, um selbst zu verwalten/investieren", "Eine Mischung aus beidem", "Ich weiss noch nicht"] },
   { key: "anliegen", title: "Was beschäftigt dich am meisten bei deiner Vorsorgeplanung? (kurz in eigenen Worten)", type: "text",
-    placeholder: "z.B. 'Ich weiss nicht, wie viel Rente ich am Ende bekomme…'" }
+    placeholder: "z.B. 'Ich weiss nicht, wie viel Rente ich am Ende bekomme…'" },
+  { key: "email", title: "Wohin dürfen wir deine persönliche Auswertung schicken?", type: "email",
+    placeholder: "deine@email.ch",
+    note: "Du bekommst deine Auswertung sofort hier auf der Seite und zusätzlich per E-Mail zugeschickt. Keine Weitergabe an Dritte, Abmeldung jederzeit möglich." }
 ];
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 let current = 0;
 const answers = {};
@@ -305,11 +310,20 @@ function renderQuestion(){
   } else if(q.type === 'text'){
     const val = answers[q.key] || '';
     html += `<input type="text" id="textInput" placeholder="${q.placeholder}" value="${val.replace(/"/g,'&quot;')}">`;
+  } else if(q.type === 'email'){
+    const val = answers[q.key] || '';
+    html += `<input type="email" id="emailInput" placeholder="${q.placeholder}" value="${val.replace(/"/g,'&quot;')}">`;
+    if(q.note){
+      html += `<p style="font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.5;margin:10px 0 0;">${q.note}</p>`;
+    }
   }
+
+  const emailValid = q.type === 'email' && EMAIL_PATTERN.test(answers[q.key] || '');
+  const nextDisabled = (q.type === 'single' && !answers[q.key]) || (q.type === 'email' && !emailValid);
 
   html += `<div class="nav-row">
       <button class="btn-back ${current===0?'hidden':''}" id="backBtn">← Zurück</button>
-      <button class="btn-primary" id="nextBtn" ${!answers[q.key] && q.type==='single' ? 'disabled' : ''}>${current === questions.length-1 ? 'Auswertung starten' : 'Weiter'}</button>
+      <button class="btn-primary" id="nextBtn" ${nextDisabled ? 'disabled' : ''}>${current === questions.length-1 ? 'Auswertung erhalten' : 'Weiter'}</button>
     </div>`;
 
   quizArea.innerHTML = html;
@@ -326,6 +340,20 @@ function renderQuestion(){
     input.addEventListener('input', () => { answers[q.key] = input.value; });
     input.addEventListener('keydown', (e) => {
       if(e.key === 'Enter'){
+        e.preventDefault();
+        goNext();
+      }
+    });
+    setTimeout(() => input.focus(), 50);
+  } else if(q.type === 'email'){
+    const input = document.getElementById('emailInput');
+    const nextBtn = document.getElementById('nextBtn');
+    input.addEventListener('input', () => {
+      answers[q.key] = input.value;
+      nextBtn.disabled = !EMAIL_PATTERN.test(input.value);
+    });
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' && EMAIL_PATTERN.test(input.value)){
         e.preventDefault();
         goNext();
       }
