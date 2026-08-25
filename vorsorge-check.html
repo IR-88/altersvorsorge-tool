@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vorsorge-Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e98b9e;
+    --accent:#950032;
+    --btn:#950032;
+    --input-bg:#6b0028;
+    --card-bg: rgba(255,255,255,0.35);
+    --card-border: rgba(255,255,255,0.55);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background: linear-gradient(160deg, var(--bg) 0%, #f2b7c2 60%, #e98b9e 100%);
+    font-family:'DM Sans', sans-serif;
+    color:#3a0014;
+    padding:40px 16px 80px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  header{text-align:center;margin-bottom:36px;}
+  h1{
+    font-family:'Playfair Display', serif;
+    font-size:2.4rem;
+    font-weight:700;
+    color:var(--accent);
+    margin:0 0 10px;
+    letter-spacing:0.3px;
+  }
+  .subtitle{
+    font-size:1.05rem;
+    color:#5a0020;
+    max-width:520px;
+    margin:0 auto;
+    line-height:1.5;
+  }
+  .progress-wrap{max-width:520px;margin:0 auto 28px;}
+  .progress-track{
+    height:6px;
+    background:rgba(255,255,255,0.5);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background:var(--accent);
+    border-radius:4px;
+    transition:width .35s ease;
+  }
+  .progress-label{
+    text-align:center;
+    font-size:0.8rem;
+    color:#5a0020;
+    margin-top:6px;
+    letter-spacing:0.5px;
+  }
+  .panel{
+    background:var(--input-bg);
+    border-radius:18px;
+    padding:34px 30px;
+    color:#fff;
+    box-shadow:0 20px 40px rgba(60,0,20,0.25);
+  }
+  .q-title{
+    font-family:'Playfair Display', serif;
+    font-size:1.3rem;
+    font-weight:600;
+    margin:0 0 22px;
+    line-height:1.4;
+  }
+  .options{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
+  .option{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 16px;
+    border-radius:12px;
+    background:rgba(255,255,255,0.08);
+    border:1.5px solid rgba(255,255,255,0.25);
+    cursor:pointer;
+    transition:all .15s ease;
+    font-size:0.98rem;
+  }
+  .option:hover{background:rgba(255,255,255,0.16);}
+  .option.selected{
+    background:rgba(255,255,255,0.22);
+    border-color:#fff;
+  }
+  .option .dot{
+    width:18px;height:18px;border-radius:50%;
+    border:2px solid rgba(255,255,255,0.6);
+    flex-shrink:0;
+    position:relative;
+  }
+  .option.selected .dot::after{
+    content:'';
+    position:absolute;inset:3px;
+    border-radius:50%;
+    background:#fff;
+  }
+  input[type="text"]{
+    width:100%;
+    padding:14px 16px;
+    border-radius:12px;
+    border:1.5px solid rgba(255,255,255,0.35);
+    background:rgba(255,255,255,0.12);
+    color:#fff;
+    font-family:'DM Sans', sans-serif;
+    font-size:1rem;
+    outline:none;
+  }
+  input[type="text"]::placeholder{color:rgba(255,255,255,0.65);}
+  input[type="text"]:focus{border-color:#fff;}
+  .nav-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:26px;
+  }
+  button{
+    font-family:'DM Sans', sans-serif;
+    font-weight:700;
+    border:none;
+    cursor:pointer;
+    border-radius:30px;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  button:active{transform:scale(0.97);}
+  .btn-primary{
+    background:var(--btn);
+    color:#fff;
+    padding:13px 30px;
+    font-size:0.98rem;
+    box-shadow:0 8px 18px rgba(149,0,50,0.35);
+  }
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-back{
+    background:transparent;
+    color:rgba(255,255,255,0.75);
+    font-size:0.9rem;
+    padding:10px 6px;
+  }
+  .btn-back:hover{color:#fff;}
+  .hidden{display:none !important;}
+
+  .loading-box{text-align:center;padding:60px 20px;}
+  .spinner{
+    width:46px;height:46px;
+    border-radius:50%;
+    border:4px solid rgba(255,255,255,0.25);
+    border-top-color:#fff;
+    margin:0 auto 20px;
+    animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:0.95rem;color:rgba(255,255,255,0.85);}
+
+  .results{margin-top:10px;}
+  .result-card{
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    backdrop-filter:blur(6px);
+    border-radius:16px;
+    padding:22px 24px;
+    margin-bottom:16px;
+    opacity:0;
+    animation:fadeUp .55s ease forwards;
+  }
+  @keyframes fadeUp{
+    from{opacity:0; transform:translateY(18px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .result-card h3{
+    font-family:'Playfair Display', serif;
+    color:var(--accent);
+    margin:0 0 10px;
+    font-size:1.15rem;
+  }
+  .result-card p{
+    margin:0;
+    line-height:1.55;
+    font-size:0.97rem;
+    color:#3a0014;
+  }
+  .reset-row{text-align:center;margin-top:28px;}
+  .btn-reset{
+    background:transparent;
+    border:2px solid var(--accent);
+    color:var(--accent);
+    padding:11px 26px;
+    font-size:0.95rem;
+    border-radius:30px;
+  }
+  .btn-reset:hover{background:var(--accent);color:#fff;}
+
+  .error-box{
+    background:rgba(255,255,255,0.9);
+    border-left:5px solid var(--accent);
+    border-radius:10px;
+    padding:18px 20px;
+    color:#3a0014;
+    font-size:0.95rem;
+    line-height:1.5;
+  }
+  footer.note{
+    max-width:520px;
+    margin:30px auto 0;
+    text-align:center;
+    font-size:0.78rem;
+    color:#5a0020;
+    opacity:0.8;
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Vorsorge-Check</h1>
+    <p class="subtitle">Finde in wenigen Minuten heraus, wo du bei deiner AHV- und Pensionskassen-Planung stehst — und worauf du jetzt achten solltest.</p>
+  </header>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-label" id="progressLabel">Frage 1 von 9</div>
+  </div>
+
+  <div class="panel" id="quizPanel">
+    <div id="quizArea"></div>
+  </div>
+
+  <div class="panel hidden" id="loadingPanel">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText">Deine Auswertung wird erstellt …</div>
+    </div>
+  </div>
+
+  <div id="resultsArea"></div>
+
+  <div class="reset-row hidden" id="resetRow">
+    <button class="btn-reset" id="resetBtn">← Zurück zum Anfang</button>
+  </div>
+
+  <footer class="note">Dieses Tool bietet eine erste, unverbindliche Orientierung und ersetzt keine persönliche Vorsorgeberatung.</footer>
+</div>
+
+<script>
+const questions = [
+  { key: "alter", title: "In welcher Alterspanne befindest du dich?", type: "single",
+    options: ["unter 45 Jahre", "45 – 55 Jahre", "56 – 60 Jahre", "61 – 65 Jahre (kurz vor Pensionierung)", "über 65 Jahre"] },
+  { key: "zivilstand", title: "Wie ist dein Zivilstand?", type: "single",
+    options: ["Ledig", "Verheiratet / eingetragene Partnerschaft", "Geschieden", "Verwitwet"] },
+  { key: "pensum", title: "Wie hoch ist bzw. war dein durchschnittliches Arbeitspensum über die Jahre?", type: "single",
+    options: ["100%", "80 – 99%", "50 – 79%", "unter 50%", "Länger nicht erwerbstätig (z.B. Kinderbetreuung, Pflege)"] },
+  { key: "einkommen", title: "Wie hoch war dein durchschnittliches Jahreseinkommen (brutto), z.B. als Verkäuferin?", type: "single",
+    options: ["unter CHF 40'000", "CHF 40'000 – 60'000", "CHF 60'000 – 84'600 (aktuelles AHV-Maximum)", "über CHF 84'600", "Ich weiss es nicht genau"] },
+  { key: "beitragsjahre", title: "Hast du seit deinem 20. Altersjahr lückenlos AHV-Beiträge einbezahlt (auch als Nichterwerbstätige oder über den Ehepartner)?", type: "single",
+    options: ["Ja, lückenlos", "Nein, es gibt Beitragslücken", "Ich weiss es nicht"] },
+  { key: "pk_guthaben", title: "Wie hoch ist dein ungefähres Pensionskassen-Guthaben (2. Säule) aktuell?", type: "single",
+    options: ["unter CHF 50'000", "CHF 50'000 – 150'000", "CHF 150'000 – 300'000", "über CHF 300'000", "Ich weiss es nicht"] },
+  { key: "pensionierungsalter", title: "In welchem Alter möchtest du dich pensionieren lassen?", type: "single",
+    options: ["Vorzeitig (vor 64/65)", "Ordentlich mit 64 (Frauen) / 65 (Männer)", "Später, mit Weiterarbeit", "Noch unklar"] },
+  { key: "sicherheit_flexibilitaet", title: "Was ist dir bei der Pensionskasse wichtiger?", type: "single",
+    options: ["Sicherheit: lebenslange, garantierte monatliche Rente", "Flexibilität: Kapitalbezug, um selbst zu verwalten/investieren", "Eine Mischung aus beidem", "Ich weiss noch nicht"] },
+  { key: "anliegen", title: "Was beschäftigt dich am meisten bei deiner Vorsorgeplanung? (kurz in eigenen Worten)", type: "text",
+    placeholder: "z.B. 'Ich weiss nicht, wie viel Rente ich am Ende bekomme…'" }
+];
+
+let current = 0;
+const answers = {};
+
+const quizArea = document.getElementById('quizArea');
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const progressWrap = document.getElementById('progressWrap');
+const quizPanel = document.getElementById('quizPanel');
+const loadingPanel = document.getElementById('loadingPanel');
+const loadingText = document.getElementById('loadingText');
+const resultsArea = document.getElementById('resultsArea');
+const resetRow = document.getElementById('resetRow');
+const resetBtn = document.getElementById('resetBtn');
+
+function renderQuestion(){
+  const q = questions[current];
+  progressFill.style.width = ((current)/(questions.length))*100 + '%';
+  progressLabel.textContent = `Frage ${current+1} von ${questions.length}`;
+
+  let html = `<div class="q-title">${q.title}</div>`;
+
+  if(q.type === 'single'){
+    html += `<div class="options" id="optionsBox">`;
+    q.options.forEach((opt) => {
+      const selected = answers[q.key] === opt ? 'selected' : '';
+      html += `<div class="option ${selected}" data-value="${opt}"><span class="dot"></span><span>${opt}</span></div>`;
+    });
+    html += `</div>`;
+  } else if(q.type === 'text'){
+    const val = answers[q.key] || '';
+    html += `<input type="text" id="textInput" placeholder="${q.placeholder}" value="${val.replace(/"/g,'&quot;')}">`;
+  }
+
+  html += `<div class="nav-row">
+      <button class="btn-back ${current===0?'hidden':''}" id="backBtn">← Zurück</button>
+      <button class="btn-primary" id="nextBtn" ${!answers[q.key] && q.type==='single' ? 'disabled' : ''}>${current === questions.length-1 ? 'Auswertung starten' : 'Weiter'}</button>
+    </div>`;
+
+  quizArea.innerHTML = html;
+
+  if(q.type === 'single'){
+    document.querySelectorAll('.option').forEach(el => {
+      el.addEventListener('click', () => {
+        answers[q.key] = el.getAttribute('data-value');
+        renderQuestion();
+      });
+    });
+  } else if(q.type === 'text'){
+    const input = document.getElementById('textInput');
+    input.addEventListener('input', () => { answers[q.key] = input.value; });
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        goNext();
+      }
+    });
+    setTimeout(() => input.focus(), 50);
+  }
+
+  const backBtn = document.getElementById('backBtn');
+  if(backBtn) backBtn.addEventListener('click', goBack);
+  document.getElementById('nextBtn').addEventListener('click', goNext);
+}
+
+function goBack(){
+  if(current > 0){
+    current -= 1;
+    renderQuestion();
+  }
+}
+
+function goNext(){
+  const q = questions[current];
+  if(q.type === 'text' && !answers[q.key]){
+    answers[q.key] = '';
+  }
+  if(current < questions.length - 1){
+    current += 1;
+    renderQuestion();
+  } else {
+    submitQuiz();
+  }
+}
+
+async function callFunction(attempt = 1, maxAttempts = 3){
+  loadingText.textContent = attempt === 1 ? 'Deine Auswertung wird erstellt …' : `Versuch ${attempt}/${maxAttempts} …`;
+  try{
+    const response = await fetch("/.netlify/functions/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(answers)
+    });
+
+    if(response.status === 504){
+      showError({ message: "TIMEOUT" });
+      return;
+    }
+
+    if(response.status === 529 || response.status === 503){
+      if(attempt < maxAttempts){
+        await new Promise(r => setTimeout(r, 2500));
+        return callFunction(attempt + 1, maxAttempts);
+      } else {
+        showError({ message: "OVERLOADED" });
+        return;
+      }
+    }
+
+    let data;
+    try{
+      data = await response.json();
+    } catch(e){
+      showError({ message: "PARSE_ERROR" });
+      return;
+    }
+
+    if(!response.ok || data.error){
+      showError({ message: "SERVER", text: data.error });
+      return;
+    }
+
+    renderResults(data.result);
+  } catch(err){
+    showError({ message: "NETWORK" });
+  }
+}
+
+function submitQuiz(){
+  quizPanel.classList.add('hidden');
+  progressWrap.classList.add('hidden');
+  loadingPanel.classList.remove('hidden');
+  callFunction();
+}
+
+function renderResults(cards){
+  loadingPanel.classList.add('hidden');
+  let html = `<div class="results">`;
+  (cards || []).forEach((c, i) => {
+    html += `<div class="result-card" style="animation-delay:${i*0.15}s">
+        <h3>${escapeHtml(c.title || '')}</h3>
+        <p>${escapeHtml(c.body || '')}</p>
+      </div>`;
+  });
+  html += `</div><div class="disclaimer">Diese Einschätzung basiert auf deinen Angaben und dient der ersten Orientierung. Für eine verbindliche Berechnung wende dich an deine Ausgleichskasse (AHV) und deine Pensionskasse.</div>`;
+  resultsArea.innerHTML = html;
+  resetRow.classList.remove('hidden');
+}
+
+function showError(err){
+  loadingPanel.classList.add('hidden');
+  let msg = "Es gab ein unerwartetes Problem bei der Auswertung. Bitte versuche es erneut.";
+  if(err.message === "TIMEOUT"){
+    msg = "Server Timeout – bitte nochmal versuchen.";
+  } else if(err.message === "OVERLOADED"){
+    msg = "Der Dienst ist gerade stark ausgelastet. Bitte versuche es in einem Moment erneut.";
+  } else if(err.message === "PARSE_ERROR"){
+    msg = "Die Antwort konnte nicht gelesen werden. Bitte versuche es erneut.";
+  } else if(err.message === "NETWORK"){
+    msg = "Verbindung zum Server fehlgeschlagen. Bitte prüfe deine Internetverbindung und versuche es erneut.";
+  } else if(err.message === "SERVER" && err.text){
+    msg = err.text;
+  }
+  resultsArea.innerHTML = `<div class="error-box">⚠️ ${escapeHtml(msg)}</div>`;
+  resetRow.classList.remove('hidden');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function resetAll(){
+  current = 0;
+  Object.keys(answers).forEach(k => delete answers[k]);
+  resultsArea.innerHTML = '';
+  resetRow.classList.add('hidden');
+  loadingPanel.classList.add('hidden');
+  quizPanel.classList.remove('hidden');
+  progressWrap.classList.remove('hidden');
+  renderQuestion();
+}
+
+resetBtn.addEventListener('click', resetAll);
+
+renderQuestion();
+</script>
+</body>
+</html>
